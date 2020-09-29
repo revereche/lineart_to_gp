@@ -1,5 +1,7 @@
 # lineart_to_gp
 
+![example](linegp-example.png)
+
 This is an add-on to generate Grease Pencil strokes based on line art from raster images (like PNG or JPG) with the appropriate thickness and thinness. This is kind of redundant with the work being done importing potrace now, but at the moment mine supports multiple colors and supports finer detail, so I figured I'd share while it might still be relevant!
 NOTE: This uses scikit-image and won't work without it! Scroll down for installation instructions.
 
