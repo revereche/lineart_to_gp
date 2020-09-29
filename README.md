@@ -7,9 +7,17 @@ NOTE: This uses scikit-image and won't work without it! Scroll down for installa
 
 - You can tweak the imported strokes, just like any you drew, and it's just one stroke per line.
 
-
 - The modifiers will also act on it appropriately. 
 
+- It can import colors from line art. For best results, use transparent images and check off "Transparent." Otherwise, black and white images work fine.
+
+- If you turn off 
+
+- Turn off "Colors From Lineart," it will use the active material instead.
+
+- It takes longer to connect strokes, so turn them off for bigger images, but modifiers and color fill won't work for disconnected points.
+
+- Use a Simplify or Smooth modifier to get rid of aliasing.
 
 - There's an option to generate a Grease Pencil object parent to a prealigned camera. If you do a render with that camera (for example, to export line art generated with FreeStyle or an inverse hull), the image will be (approximately) aligned when you import it to the attached Grease Pencil object! You will probably have to hide the object in viewport to see the Grease Pencil behind it, though, since for resolution reasons the Grease Pencil object has to be a certain distance from the camera. Mess with Focal Length at your own risk.
 
@@ -17,7 +25,7 @@ NOTE: This uses scikit-image and won't work without it! Scroll down for installa
 
 - Totally unintentional, but you *can* use the line art algorithm for solid colors, too! It works pretty well for one solid color, but expect mixed results with multiple colors.
 
-Some notes: 
+Some additional notes: 
 
 - Uses the hardness of the selected brush.
 
