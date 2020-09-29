@@ -5,15 +5,15 @@
 This is an add-on to generate Grease Pencil strokes based on line art from raster images (like PNG or JPG) with the appropriate thickness and thinness. This is kind of redundant with the work being done importing potrace now, but at the moment mine supports multiple colors and supports finer detail, so I figured I'd share while it might still be relevant!
 NOTE: This uses scikit-image and won't work without it! Scroll down for installation instructions.
 
-- You can tweak the imported strokes, just like any you drew, and it's just one stroke per line.
+Some notes:
+
+- You can sculpt the imported strokes, just like any you drew.
 
 - The modifiers will also act on it appropriately. 
 
 - It can import colors from line art. For best results, use transparent images and check off "Transparent." Otherwise, black and white images work fine.
 
-- If you turn off 
-
-- Turn off "Colors From Lineart," it will use the active material instead.
+- If you turn off "Colors From Lineart," it will use the active material instead.
 
 - It takes longer to connect strokes, so turn them off for bigger images, but modifiers and color fill won't work for disconnected points.
 
@@ -24,8 +24,6 @@ NOTE: This uses scikit-image and won't work without it! Scroll down for installa
 - If you want to use a painterly brush, you'll probably want to use modifiers to simplify it, turn down the opacity, and scramble the UVs. Otherwise, it'll just be too dense.
 
 - Totally unintentional, but you *can* use the line art algorithm for solid colors, too! It works pretty well for one solid color, but expect mixed results with multiple colors.
-
-Some additional notes: 
 
 - Uses the hardness of the selected brush.
 
