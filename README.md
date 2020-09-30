@@ -33,9 +33,7 @@ Some notes:
 
 - If an image is taking too long to import, you can turn off the "Connection" option, which will give you a bunch of disconnected points. Not a huge difference visually, but you won't be able to flood fill, and modifiers won't work.
 
-- It takes color from the line art itself at the pixel level by default, but you can disable that to use the active material instead. You'll probably want to disable it for solid black lineart if there's a lot of antialiasing going on it's low res, to avoid a lot of white/gray artifacts.
-
-- It filters white by default, but if you use an image with a lot of transparency, it will use that instead.
+- It takes color from the line art itself at the pixel level by default, but you can disable that to use the active material instead. You'll probably want to disable it for solid black lineart if there's a lot of antialiasing going on or it's low res, to avoid a lot of white/gray artifacts.
 
 - If you're somehow still not getting enough detail, you can bring in a large image and just resize it, but that will take longer to process. 
 
@@ -52,6 +50,7 @@ Once you have the directory open in the file explorer, navigate to the "2.90" fo
 Once there, open the command line in that directory by going to File > Open PowerShell > Open Power Shell as administrator. (It won't work if you're not administrator for this.) Then, input the following two commands, one at a time:
 
 bin/python -m ensurepip
+
 bin/python -m pip install -t . scikit-image
 
 On Linux (and probably Mac), you should stil be in just the 2.90 folder, and the commands will be:
