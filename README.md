@@ -53,8 +53,10 @@ bin/python -m ensurepip
 
 bin/python -m pip install -t . scikit-image
 
-On Linux (and probably Mac), you should stil be in just the 2.90 folder, and the commands will be:
+On Linux (and probably Mac), you should still be in just the 2.90 folder, and the commands will be:
+
 ./python3.7m -m ensurepip
+
 ./python3.7m -m pip install scikit-image
 
 After that, just install the add-on the way you would any other!
