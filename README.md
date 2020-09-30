@@ -35,7 +35,7 @@ Some notes:
 
 - It's designed with 1920x1080 images in mind. The more lines there are, and the thinner those lines are, the longer it will take to process. A very simple image will take a few seconds, while a very complex one could take twenty or more.
 
-- If an image is taking too long to import, you can turn off the "Connection" option, which will give you a bunch of disconnected points. Not a huge difference visually, but you won't be able to flood fill, and modifiers won't work.
+- If an image is taking too long to import, you can turn off the "Connect Points" option, which will give you a bunch of disconnected points. Not a huge difference visually, but you won't be able to flood fill, and modifiers won't work.
 
 - It takes color from the line art itself at the pixel level by default, but you can disable that to use the active material instead. You'll probably want to disable it for solid black lineart if there's a lot of antialiasing going on or it's low res, to avoid a lot of white/gray artifacts.
 
