@@ -9,6 +9,8 @@
 This is an add-on to generate Grease Pencil strokes based on line art from raster images (like PNG or JPG) with the appropriate thickness and thinness. This is kind of redundant with the work being done importing potrace now, but at the moment mine supports multiple colors and supports finer detail, so I figured I'd share while it might still be relevant!
 
 
+**UPDATE: Color flat importing now working properly, just select "Color" from the menu (and make sure "Connected" isn't on)! If there are unsightly white lines between your color areas, just turn up the thickness.**
+
 Some notes:
 
 - You can sculpt the imported strokes, just like any you drew.
