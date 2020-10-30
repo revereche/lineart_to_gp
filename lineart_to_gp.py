@@ -100,7 +100,8 @@ def img_to_strokes():
         num = get_number(img_src)        
         img_data = Image.open(img_dir + img_src)
         width, height = img_data.size
-        print("img data size" + str(img_data.size))
+        #print("image size" + str(img_data.size))
+        print("current image: " + str(img_src))
         
         regions = img_to_list(img_data, num, noise, img_type, transparent, smoothness)
 
@@ -406,15 +407,13 @@ def harris_voronoi(img_data, vor_arr, h_smoothness, dist_on_skel, is_alpha):
             continue
     
     #prep
-    print("image: " + str(type(np_img[0,0])) + " img_data: " + str(type(img_data[0,0])))
+    #print("image: " + str(type(np_img[0,0])) + " img_data: " + str(type(img_data[0,0])))
     image = np_img
     image = invert(image)
+    img_data = img_data != 0
     
-    try:
-        image *= img_data
-    except UFuncTypeError:
-        image = smooth(image, 0.7)
-        image *= img_data
+    image = smooth(image, 0.7)
+    image *= img_data
 
     #get regions
     label_image = label(image)
@@ -489,10 +488,8 @@ def alpha_test(is_alpha, color_data):
     a = []
     if is_alpha:
         alpha_mask = color_data[:,:,3]
-        print("alpha_mask: " + str(alpha_mask[0,0]))
         a = alpha_mask > 200
         a_ravel = a.ravel()
-        print("a: " + str(a[0,0]))
         
         #if the array is mostly True, then we hardly have any transparency in this image, and it would be better to threshold; so, we look for the frequency of values and sort so the most frequent is first
         unique_a,counts_a = np.unique(a_ravel, return_counts=True)
@@ -538,11 +535,8 @@ def img_to_list(img_data, num, noise, img_type, transparent, smoothness):
 
         lst = shading_to_list(img_data, color_data, is_alpha)
 
-    print("Shape of img_data before:" + str(img_data.shape))
-    
     if img_type == "COLOR":
         lst = color_erode(img_data, color_data, is_alpha, transparent, noise, img_type)
-        print("Shape of img_data after:" + str(img_data.shape))
 
     if img_type == "LINEART":
         #make a padded version so the Voronoi output looks better
@@ -646,7 +640,6 @@ def color_erode(img_data, color_data, is_alpha, transparent, noise, img_type):
                 img_slice *= alpha_mask[minr:maxr, minc:maxc]
 
             #now erode it and stick it in the new array
-            print("are we working?")
             selem = disk(1)
             eroded_slice = binary_erosion(img_slice, selem)
             
@@ -666,7 +659,6 @@ def color_erode(img_data, color_data, is_alpha, transparent, noise, img_type):
     
     lst = pts_to_list(dist_on_skel, label_image2, noise, img_type, color_data)
         
-    print("Shape of new_arr 2:" + str(new_arr.shape))
     return lst
 
 #UTIL
@@ -711,7 +703,7 @@ def img_test(img):
     img = img.split('.')
     format = img[-1]
     if format.lower() in formats:
-        print("Format:" + str(format.lower()))
+        #print("Format:" + str(format.lower()))
         return True
     else:
         print("Wrong file format!")
@@ -741,7 +733,7 @@ def dir_test(img_dir, img_seq):
         slash = '/'
         img_dir = slash.join(img_dir)
         img_dir += "/"
-        print("img_dir up here: " + str(img_dir))
+        #print("img_dir up here: " + str(img_dir))
         
         files = [ img_name ]
 
@@ -963,11 +955,16 @@ bpy.types.WindowManager.radius=bpy.props.FloatProperty(name='Skip Points',
 bpy.types.WindowManager.resize=bpy.props.FloatProperty(name='Resize (Percentage)',
         min=0, max=5, default=1, description='Resize image relative to canvas')
 
+bpy.types.WindowManager.img_type=bpy.props.EnumProperty(name='', items=[('LINEART','Line Art', 
+        'Black and white line art'),('COLOR', 'Color','Flat colors to go under line art')], 
+        description="Type of image we're importing", default='LINEART')
+
+'''
 #image type
 bpy.types.WindowManager.img_type=bpy.props.EnumProperty(name='', items=[('LINEART','Line Art', 
         'Black and white line art'),('COLOR', 'Color','Flat colors to go under line art'), ('SHADING', 'Shading/Lighting','Shading or lighting, all one color')], 
         description="Type of image we're importing", default='LINEART')
-
+'''
 
 _classes = [
     LineartToGp,
