@@ -14,18 +14,28 @@ bl_info = {
  
 import time, timeit
 import bpy, os, sys, re, math, random
+from shutil import copyfile
 import numpy as np
-from scipy import spatial
-from skimage.morphology import medial_axis, binary_dilation,  disk
+from scipy import ndimage, spatial
+import matplotlib.image as mpimg
+from skimage.morphology import medial_axis, dilation, binary_dilation, binary_erosion, erosion, disk
 from skimage.util import invert
-from skimage.color import rgb2gray, rgba2rgb, label2rgb
+from skimage.color import rgb2gray, rgba2rgb
 from skimage.filters import threshold_otsu, gaussian
 from skimage.transform import resize
 from skimage.feature import corner_harris, corner_subpix, corner_peaks
+from PIL import Image, ImageDraw, ImageFont
+
+import matplotlib.patches as mpatches
+
+from skimage.segmentation import clear_border
 from skimage.measure import label, regionprops
+from skimage.morphology import closing, square
+from skimage.color import label2rgb
+from skimage.color import rgb2gray
 from skimage.draw import line
+
 from scipy.spatial import Voronoi, voronoi_plot_2d
-from PIL import Image, ImageDraw
 
 from bpy.types import (Panel, Operator)
 from bpy.utils import register_class, unregister_class
@@ -43,6 +53,7 @@ def main(context):
 def img_to_strokes():
     wm = bpy.context.window_manager
 
+    smoothness = wm.smoothness
     img_dir = wm.img_dir
     img_seq = wm.img_seq
     radius = wm.radius    
@@ -55,24 +66,22 @@ def img_to_strokes():
     overwrite_layer = wm.overwrite_layer
     color_src = wm.color_src
     transparent = wm.transparent
-    #img_type = wm.img_type
-    img_type = 'LINEART'
+    img_type = wm.img_type
+    #img_type = 'LINEART'
     
     obj = bpy.context.view_layer.objects.active
     gp = obj.data
     layers = gp.layers
+
     files, layer_name, img_dir = dir_test(img_dir, img_seq)
     
     #remove existing layers so we don't get duplicates
     if overwrite_layer:
         for layer in layers:
-            print(layer.info)
-            
             try:
                 if str(layer.info) == str(layer_name):
                     layers.active = layer
-                    bpy.ops.gpencil.layer_remove()
-                    
+                    bpy.ops.gpencil.layer_remove()   
                 if str(layer.info) == str(layer_name) + " boundary":
                     layers.active = layer
                     bpy.ops.gpencil.layer_remove()
@@ -93,7 +102,7 @@ def img_to_strokes():
         width, height = img_data.size
         print("img data size" + str(img_data.size))
         
-        regions = img_to_list(img_data, num, noise, img_type, transparent)
+        regions = img_to_list(img_data, num, noise, img_type, transparent, smoothness)
 
         #setting up our canvas
         frame = layer.frames.new(num)
@@ -238,7 +247,8 @@ def stroke_edit(edit_layer, layers):
     bpy.ops.object.mode_set(mode='EDIT_GPENCIL')
     
     layers.active = edit_layer
-
+    
+    #WARNING: This hasn't been tested on strokes yet
     #we hide all layers but active, but if a layer is already hidden, we don't want to turn it back later
     hidden = []
     for layer in layers:
@@ -371,7 +381,7 @@ def keep_in_bounds(x, dist_on_skel, n):
         x = dist_on_skel.shape[n] - 1
     return x
 
-def harris_voronoi(img_data, vor_arr, h_smoothness, dist_on_skel, is_alpha, color_data):
+def harris_voronoi(img_data, vor_arr, h_smoothness, dist_on_skel, is_alpha):
     #Using Harris edges and a Voronoi diagram from that to get regions for 
     #every stroke before it hits an angle, so we can just join strokes without
     #getting unwanted black patches from merging points with acute angles
@@ -396,11 +406,15 @@ def harris_voronoi(img_data, vor_arr, h_smoothness, dist_on_skel, is_alpha, colo
             continue
     
     #prep
+    print("image: " + str(type(np_img[0,0])) + " img_data: " + str(type(img_data[0,0])))
     image = np_img
     image = invert(image)
-    image = smooth(image, 0.7)
-    print("image: " + str(type(image[0,0])) + " img_data: " + str(type(img_data[0,0])))
-    image *= img_data
+    
+    try:
+        image *= img_data
+    except UFuncTypeError:
+        image = smooth(image, 0.7)
+        image *= img_data
 
     #get regions
     label_image = label(image)
@@ -445,12 +459,10 @@ def pts_to_list(dist_on_skel, label_image, noise, img_type, color_data):
             minc -= expand
             maxr += expand
             maxc += expand
-
-            
+   
             #crop dist_on_skel to region area
             skel_slice = dist_on_skel[minr:maxr, minc:maxc]
 
-            
             image_lst = []
             for ir, row in enumerate(skel_slice):
                 for ic,pressure in enumerate(row):
@@ -459,6 +471,10 @@ def pts_to_list(dist_on_skel, label_image, noise, img_type, color_data):
                         y = ir + minr
                         size = pressure
                         color = color_data[y,x]
+                        '''
+                        if color_data[y,x,3] < 0.1:
+                            continue
+                        '''
                         r = color_data[y,x,0] / 255
                         g = color_data[y,x,1] / 255
                         b = color_data[y,x,2] / 255
@@ -489,11 +505,12 @@ def alpha_test(is_alpha, color_data):
     #return a, transparent
     return a
 
-def img_to_list(img_data, num, noise, img_type, transparent): 
-    smoothness = 0
-    h_smoothness = 0
+def img_to_list(img_data, num, noise, img_type, transparent, smoothness): 
+    #smoothness = 5
+    h_smoothness = smoothness * 1.5
     is_alpha = False
     width, height = img_data.size
+    img_data = np.array(img_data)
     img_data = np.array(img_data)
     color_data = img_data.copy()
     lst = []
@@ -521,6 +538,11 @@ def img_to_list(img_data, num, noise, img_type, transparent):
 
         lst = shading_to_list(img_data, color_data, is_alpha)
 
+    print("Shape of img_data before:" + str(img_data.shape))
+    
+    if img_type == "COLOR":
+        lst = color_erode(img_data, color_data, is_alpha, transparent, noise, img_type)
+        print("Shape of img_data after:" + str(img_data.shape))
 
     if img_type == "LINEART":
         #make a padded version so the Voronoi output looks better
@@ -537,7 +559,7 @@ def img_to_list(img_data, num, noise, img_type, transparent):
         dist_on_skel = distance * skel
 
         #Voronoi diagram from Harris edges, to avoid concave shapes
-        label_image = harris_voronoi(img_data, vor_arr, h_smoothness, dist_on_skel, is_alpha, color_data)
+        label_image = harris_voronoi(img_data, vor_arr, h_smoothness, dist_on_skel, is_alpha)
         
         lst = pts_to_list(dist_on_skel, label_image, noise, img_type, color_data)
 
@@ -594,6 +616,59 @@ def shading_to_list(img_data, color_data, is_alpha):
     return region_lst
 
 
+def color_erode(img_data, color_data, is_alpha, transparent, noise, img_type): 
+        
+    
+        
+    grayscale = rgb2gray(img_data)
+    original_grayscale = grayscale
+
+    grayscale = 10 * np.round_(grayscale, 1)
+    grayscale = grayscale.astype(int)
+
+    if is_alpha and transparent:
+        alpha_mask = alpha_test(is_alpha, color_data)
+
+    label_image = label(grayscale)
+    img_data = grayscale
+    
+    new_arr = np.zeros(img_data.shape)
+
+    for region in regionprops(label_image):
+        if region.area >= 3:
+            #gives us square area in original image region is inside
+            minr, minc, maxr, maxc = region.bbox
+            
+            #use the offset to get the position of the region and rip it from the image
+            img_slice = region.image
+            
+            if is_alpha and transparent:
+                img_slice *= alpha_mask[minr:maxr, minc:maxc]
+
+            #now erode it and stick it in the new array
+            print("are we working?")
+            selem = disk(1)
+            eroded_slice = binary_erosion(img_slice, selem)
+            
+            new_arr[minr:maxr, minc:maxc] += eroded_slice
+            #new_arr[minr:maxr, minc:maxc] += img_slice
+
+
+    vor_arr = np.pad(new_arr, pad_width=10, mode='constant', constant_values=1)   
+
+    #medial axis skeleton, to get point location and thickness
+    skel, distance = medial_axis(new_arr, return_distance=True)
+    dist_on_skel = distance * skel
+
+    #Voronoi diagram from Harris edges, to avoid concave shapes
+    h_smoothness = 0
+    label_image2 = harris_voronoi(new_arr, vor_arr, h_smoothness, dist_on_skel, is_alpha)
+    
+    lst = pts_to_list(dist_on_skel, label_image2, noise, img_type, color_data)
+        
+    print("Shape of new_arr 2:" + str(new_arr.shape))
+    return lst
+
 #UTIL
 def get_number(f):
     split = f.split('.')
@@ -607,6 +682,17 @@ def get_number(f):
         num = int(num)
     except ValueError:
         num = 0
+    return num
+    
+def get_number_nan(f):
+    #same function but without safety
+    split = f.split('.')
+    f = split[0]
+    split = re.split(r"(\d+)", f)
+    if len(split) > 1:
+        num = split[1]
+    else:
+        num = "nope"
     return num
 
 def get_seq_name(f):
@@ -646,7 +732,8 @@ def dir_test(img_dir, img_seq):
         dir_split = img_dir.split('/')
         if len(dir_split) == 1:
             dir_split = img_dir.split('\\')
-        img_name = dir_split[-1]    
+        img_name = dir_split[-1]   
+        dir_name = dir_split[-2]
         name = img_name.split('.')
         name = name[0]
         #print("name: " + str(name))
@@ -659,9 +746,15 @@ def dir_test(img_dir, img_seq):
         files = [ img_name ]
 
         if img_seq:
-            num = get_number(img_name)
+            is_num = False
+            num = get_number_nan(img_name)
+            try:
+                num = int(num)
+                is_num = True
+            except ValueError:
+                is_num = False
             #if no number, not a sequence; false alarm
-            if num:
+            if is_num:
                 list_dir = os.listdir(img_dir)
                 #print("Img dir now " + str(img_dir))
                 files = []
@@ -670,11 +763,11 @@ def dir_test(img_dir, img_seq):
                 for f in list_dir:
                     if seq_name:
                         if get_seq_name(f) == seq_name:
-                            print("Not even one??")
                             files.append(f)
                     else:
-                    #if the file names are all just numbers, we'll get those
+                    #if the file names are all just numbers, we'll get those and add the dir name
                         if get_number(f):
+                            name = dir_name
                             files.append(f)
     return files, name, img_dir
 
@@ -802,6 +895,10 @@ class LineartToGpGui(bpy.types.Panel):
                 
                 column.separator()
                 split = column.split(align=True)
+                split.prop(wm, 'smoothness')
+                
+                column.separator()
+                split = column.split(align=True)
                 split.prop(wm, 'noise')
                 
                 column.separator()
@@ -814,16 +911,13 @@ class LineartToGpGui(bpy.types.Panel):
 
                 row = layout.row()
                 scene = context.scene
-                
-                #extremely wonky and it's unlikely I'll ever finish it, so removing access from the GUI for now
-                '''
+
                 layout.label(text="Image Type:")
                 column = layout.column()
                 
                 column.separator()
                 split = column.split(align=True)
                 split.prop(wm, 'img_type')
-                '''
                 
                 layout.label(text="Stroke Properties:")
                 column = layout.column()
@@ -859,6 +953,8 @@ bpy.types.WindowManager.strength=bpy.props.FloatProperty(name='Strength',
 bpy.types.WindowManager.connect=bpy.props.BoolProperty(name='Connect Points', default=True, description='Connect points as strokes')
 
 #image preprocessing
+bpy.types.WindowManager.smoothness=bpy.props.FloatProperty(name='Smoothing',
+        min=0, max=20, default=0, description='Smooth sketchy images')  
 bpy.types.WindowManager.noise=bpy.props.FloatProperty(name='Noise Filter',
         min=0, max=200, default=3, description='Ignore small pieces')  
 bpy.types.WindowManager.radius=bpy.props.FloatProperty(name='Skip Points',
