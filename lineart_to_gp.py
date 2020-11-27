@@ -18,6 +18,7 @@ from shutil import copyfile
 import numpy as np
 from scipy import ndimage, spatial
 import matplotlib.image as mpimg
+from skimage import exposure
 from skimage.morphology import medial_axis, dilation, binary_dilation, binary_erosion, erosion, disk
 from skimage.util import invert
 from skimage.color import rgb2gray, rgba2rgb
@@ -503,13 +504,19 @@ def alpha_test(is_alpha, color_data):
     return a
 
 def img_to_list(img_data, num, noise, img_type, transparent, smoothness): 
+
+    
+
     #smoothness = 5
     h_smoothness = smoothness * 1.5
     is_alpha = False
     width, height = img_data.size
     img_data = np.array(img_data)
     img_data = np.array(img_data)
+    
     color_data = img_data.copy()
+    color_data = exposure.adjust_gamma(color_data, 2)
+    
     lst = []
     #strip colors
     try:
