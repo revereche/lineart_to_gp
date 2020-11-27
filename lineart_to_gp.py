@@ -68,8 +68,12 @@ def img_to_strokes():
     color_src = wm.color_src
     transparent = wm.transparent
     img_type = wm.img_type
-    #img_type = 'LINEART'
     
+    if img_type == "COLOR":
+        thickness = wm.col_thickness
+        connect = wm.col_connect
+        transparent = wm.col_transparent
+
     obj = bpy.context.view_layer.objects.active
     gp = obj.data
     layers = gp.layers
@@ -92,7 +96,7 @@ def img_to_strokes():
     layer = gp.layers.new(layer_name)
     layers.active = layer
 
-    for _,img_src in enumerate(files):
+    for _,img_src in enumerate(files):  
         is_file = img_test(img_src)
         if not is_file:
             continue
@@ -883,11 +887,20 @@ class LineartToGpGui(bpy.types.Panel):
                 column.separator()
                 split = column.split(align=True)
                 split.prop(wm, 'overwrite_layer')
-                split.prop(wm, 'connect')
+                
+                if wm.img_type == "COLOR":
+                    split.prop(wm, 'col_connect')
+                else:
+                    split.prop(wm, 'connect')
+                
                 column.separator()
                 split = column.split(align=True)
                 split.prop(wm, 'color_src')
-                split.prop(wm, 'transparent')
+                
+                if wm.img_type == "COLOR":
+                    split.prop(wm, 'col_transparent')
+                else:
+                    split.prop(wm, 'transparent')
 
                 layout.label(text="Image Preprocessing:")
                 column = layout.column()
@@ -923,14 +936,19 @@ class LineartToGpGui(bpy.types.Panel):
                 
                 column.separator()
                 split = column.split(align=True)
-                split.prop(wm, 'thickness')
+                
+                if wm.img_type == "COLOR":
+                    split.prop(wm, 'col_thickness')
+                else:
+                    split.prop(wm, 'thickness')
+                
                 split.prop(wm, 'strength')
 
 bpy.types.WindowManager.img_dir=bpy.props.StringProperty(name='', subtype='FILE_PATH',
         default=default_dir, description='Select file or folder')
 
 bpy.types.WindowManager.img_seq=bpy.props.BoolProperty(name='Image Sequence',
-        default=True, description='Open numbered image sequence in folder')
+        default=False, description='Open numbered image sequence in folder')
 bpy.types.WindowManager.draw_bounds=bpy.props.BoolProperty(name='Draw Bounds',
         default=False, description='Show image boundaries')
 bpy.types.WindowManager.overwrite_layer=bpy.props.BoolProperty(name='Overwrite Layer',
@@ -940,16 +958,24 @@ bpy.types.WindowManager.color_src=bpy.props.BoolProperty(name='Color From Image'
         default=True, description='Otherwise use active material')
 bpy.types.WindowManager.transparent=bpy.props.BoolProperty(name='Transparent',
         default=False, description='Otherwise thresholds white')
-
+        
+#custom default var for color mode
+bpy.types.WindowManager.col_transparent=bpy.props.BoolProperty(name='Transparent',
+        default=True, description='Otherwise thresholds white')
 
 #stroke options
 bpy.types.WindowManager.thickness=bpy.props.FloatProperty(name='Thickness',
         min=.01, max=100, default=9, description='Grease Pencil stroke thickness')
+#different var for color mode
+bpy.types.WindowManager.col_thickness=bpy.props.FloatProperty(name='Thickness',
+min=.01, max=100, default=9.8, description='Grease Pencil stroke thickness')
 
 bpy.types.WindowManager.strength=bpy.props.FloatProperty(name='Strength',
         min=.01, max=100, default=1, description='Grease Pencil stroke strength')
         
 bpy.types.WindowManager.connect=bpy.props.BoolProperty(name='Connect Points', default=True, description='Connect points as strokes')
+#var for color mode
+bpy.types.WindowManager.col_connect=bpy.props.BoolProperty(name='Connect Points', default=False, description='Connect points as strokes')
 
 #image preprocessing
 bpy.types.WindowManager.smoothness=bpy.props.FloatProperty(name='Smoothing',
