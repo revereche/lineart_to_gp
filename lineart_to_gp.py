@@ -394,7 +394,7 @@ def harris_voronoi(img_data, vor_arr, h_smoothness, dist_on_skel, is_alpha):
     
     #prep and feed Harris corner data
     h_data = smooth(vor_arr, h_smoothness)
-    harris = corner_peaks(corner_harris(h_data), min_distance=1)        
+    harris = corner_peaks(corner_harris(h_data), threshold_rel=0, min_distance=1)        
     vor = voronoi3(harris)
 
     #get connected lines from the finite Voronoi data
