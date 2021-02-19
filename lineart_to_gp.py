@@ -90,13 +90,15 @@ def img_to_strokes():
     transparent = wm.transparent
     img_type = wm.img_type
     
-    #stroke thickness needs to match resize
-    thickness *= resize
+    
     
     if img_type == "COLOR":
         thickness = wm.col_thickness
         connect = wm.col_connect
         transparent = wm.col_transparent
+
+    #stroke thickness needs to match resize
+    thickness *= resize
 
     obj = bpy.context.view_layer.objects.active
     gp = obj.data
