@@ -41,7 +41,7 @@ from skimage.morphology import medial_axis, dilation, binary_dilation, binary_er
 from skimage.util import invert
 from skimage.color import rgb2gray, rgba2rgb
 from skimage.filters import threshold_otsu, gaussian
-from skimage.transform import resize, rescale
+from skimage.transform import rescale
 from skimage.feature import corner_harris, corner_subpix, corner_peaks
 from PIL import Image, ImageDraw, ImageFont
 
@@ -76,6 +76,9 @@ def img_to_strokes():
     img_dir = wm.img_dir
     img_seq = wm.img_seq
     radius = wm.radius    
+    if radius < 2:
+        #If the radius is too small, we're not skipping enough and it won't connect strokes
+        radius = 2
     noise = wm.noise    
     thickness = wm.thickness
     strength = wm.strength
@@ -86,6 +89,9 @@ def img_to_strokes():
     color_src = wm.color_src
     transparent = wm.transparent
     img_type = wm.img_type
+    
+    #stroke thickness needs to match resize
+    thickness *= resize
     
     if img_type == "COLOR":
         thickness = wm.col_thickness
