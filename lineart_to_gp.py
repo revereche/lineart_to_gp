@@ -41,7 +41,7 @@ from skimage.morphology import medial_axis, dilation, binary_dilation, binary_er
 from skimage.util import invert
 from skimage.color import rgb2gray, rgba2rgb
 from skimage.filters import threshold_otsu, gaussian
-from skimage.transform import resize
+from skimage.transform import resize, rescale
 from skimage.feature import corner_harris, corner_subpix, corner_peaks
 from PIL import Image, ImageDraw, ImageFont
 
@@ -507,11 +507,12 @@ def pts_to_list(dist_on_skel, label_image, noise, img_type, color_data):
 
 def alpha_test(is_alpha, color_data):
     #if the image is transparent, use that; otherwise, threshold out the white areas
-    transparent = False
+    major_alpha = False
     a = []
     if is_alpha:
         alpha_mask = color_data[:,:,3]
-        a = alpha_mask > 200
+        #print("Alpha: " + str(alpha_mask[0,0]))
+        a = alpha_mask != 0
         a_ravel = a.ravel()
         
         #if the array is mostly True, then we hardly have any transparency in this image, and it would be better to threshold; so, we look for the frequency of values and sort so the most frequent is first
@@ -520,10 +521,10 @@ def alpha_test(is_alpha, color_data):
         freq_a = a_ravel[sort_a]
 
         if freq_a[0] == False:
-            transparent = True
+            major_alpha = True
 
-    #return a, transparent
-    return a
+    return major_alpha, a
+    #return a
 
 def img_to_list(img_data, num, noise, img_type, transparent, smoothness): 
 
@@ -572,7 +573,13 @@ def img_to_list(img_data, num, noise, img_type, transparent, smoothness):
         vor_arr = np.pad(img_data, pad_width=10, mode='constant', constant_values=1)   
 
         if is_alpha and transparent:
-            img_data = alpha_test(is_alpha, color_data)
+            major_alpha, a = alpha_test(is_alpha, color_data)
+            if major_alpha:
+                img_data = a
+            else:
+                print("Not enough transparency, falling back to white threshold")
+                img_data = smooth(img_data, smoothness)
+                img_data = invert(img_data)
         else:
             img_data = smooth(img_data, smoothness)
             img_data = invert(img_data)
@@ -641,16 +648,37 @@ def shading_to_list(img_data, color_data, is_alpha):
 
 def color_erode(img_data, color_data, is_alpha, transparent, noise, img_type): 
         
-    
+    blacks = rgb2gray(img_data)
+    blacks = blacks < 0.2
+    original_image = img_data
+    img_data = color_data
+    img_data = exposure.adjust_gamma(color_data, 1)
         
     grayscale = rgb2gray(img_data)
     original_grayscale = grayscale
-
+    
+    print(grayscale[0,0])
+    print(img_data[0,0])
+    
+    #grayscale += 9
+    
     grayscale = 10 * np.round_(grayscale, 1)
     grayscale = grayscale.astype(int)
+    grayscale += blacks
 
     if is_alpha and transparent:
-        alpha_mask = alpha_test(is_alpha, color_data)
+        major_alpha, a = alpha_test(is_alpha, color_data)
+        if major_alpha:
+            alpha_mask = a
+        else:
+            print("Not enough transparency, falling back to white threshold")
+            smoothness = 2
+            alpha_mask = smooth(grayscale, smoothness)
+            alpha_mask = invert(alpha_mask)
+    else:
+        smoothness = 2
+        alpha_mask = smooth(grayscale, smoothness)
+        alpha_mask = invert(alpha_mask)
 
     label_image = label(grayscale)
     img_data = grayscale
@@ -664,14 +692,22 @@ def color_erode(img_data, color_data, is_alpha, transparent, noise, img_type):
             
             #use the offset to get the position of the region and rip it from the image
             img_slice = region.image
-            
+
             if is_alpha and transparent:
                 img_slice *= alpha_mask[minr:maxr, minc:maxc]
+
+            if img_data.shape[1] < 2880:
+                print(img_data.shape[0])
+                print("Image under 2880px wide, resizing to avoid artifacts")
+                img_slice = rescale(img_slice, 2, anti_aliasing=False)
 
             #now erode it and stick it in the new array
             selem = disk(1)
             eroded_slice = binary_erosion(img_slice, selem)
             
+            if img_data.shape[1] < 2880:
+                eroded_slice = rescale(eroded_slice, 0.5, anti_aliasing=False)
+                
             new_arr[minr:maxr, minc:maxc] += eroded_slice
             #new_arr[minr:maxr, minc:maxc] += img_slice
 
