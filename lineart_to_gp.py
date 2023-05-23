@@ -35,7 +35,6 @@ import bpy, os, sys, re, math, random
 from shutil import copyfile
 import numpy as np
 from scipy import ndimage, spatial
-import matplotlib.image as mpimg
 from skimage import exposure
 from skimage.morphology import medial_axis, dilation, binary_dilation, binary_erosion, erosion, disk
 from skimage.util import invert
@@ -44,8 +43,6 @@ from skimage.filters import threshold_otsu, gaussian
 from skimage.transform import rescale
 from skimage.feature import corner_harris, corner_subpix, corner_peaks
 from PIL import Image, ImageDraw, ImageFont
-
-import matplotlib.patches as mpatches
 
 from skimage.segmentation import clear_border
 from skimage.measure import label, regionprops
@@ -655,24 +652,23 @@ def shading_to_list(img_data, color_data, is_alpha):
 
 
 def color_erode(img_data, color_data, is_alpha, transparent, noise, img_type): 
-        
-    blacks = rgb2gray(img_data)
+
+    #blacks = rgb2gray(img_data)
+    blacks = img_data
     blacks = blacks < 0.2
     original_image = img_data
     img_data = color_data
     img_data = exposure.adjust_gamma(color_data, 1)
         
-    grayscale = rgb2gray(img_data)
+    grayscale = img_data
+    #grayscale = rgb2gray(img_data)
     original_grayscale = grayscale
-    
-    print(grayscale[0,0])
-    print(img_data[0,0])
     
     #grayscale += 9
     
     grayscale = 10 * np.round_(grayscale, 1)
     grayscale = grayscale.astype(int)
-    grayscale += blacks
+    grayscale = grayscale[:,:,0] + blacks
 
     if is_alpha and transparent:
         major_alpha, a = alpha_test(is_alpha, color_data)
